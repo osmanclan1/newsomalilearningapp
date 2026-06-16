@@ -62,6 +62,20 @@ export const useProgressStore = create(
     (set, get) => ({
       unlockedWorlds: ['beginner'],
       completedPaths: buildInitialPaths(),
+      completedLessons: {},
+
+      completeLesson: (unitId, lessonId) => {
+        set((state) => ({
+          completedLessons: {
+            ...state.completedLessons,
+            [`${unitId}-${lessonId}`]: true,
+          },
+        }))
+      },
+
+      isLessonComplete: (unitId, lessonId) => {
+        return get().completedLessons[`${unitId}-${lessonId}`] === true
+      },
 
       completePath: (worldId, themeId, level, pathId) => {
         set((state) => {
@@ -83,6 +97,7 @@ export const useProgressStore = create(
         set({
           unlockedWorlds: ['beginner'],
           completedPaths: buildInitialPaths(),
+          completedLessons: {},
         })
       },
 

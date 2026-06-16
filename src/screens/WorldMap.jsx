@@ -13,6 +13,7 @@ const PLAYABLE_THEMES = ['restaurant']
 
 export default function WorldMap() {
   const completedPaths = useProgressStore((s) => s.completedPaths)
+  const lesson1aDone = useProgressStore((s) => s.isLessonComplete(1, 'a'))
   const world = WORLDS[0]
   const [tooltipTheme, setTooltipTheme] = useState(null)
 
@@ -31,6 +32,32 @@ export default function WorldMap() {
 
   return (
     <div className="mx-auto min-h-full max-w-lg px-4 pb-8 pt-6">
+      <section className="mb-8">
+        <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+          Unit 1
+        </p>
+        <h2 className="text-xl font-bold text-slate-900">People</h2>
+        <Link
+          to="/unit/1/lesson/a"
+          className="relative mt-3 flex items-center gap-4 rounded-2xl border border-violet-100 bg-white p-4 shadow-sm transition hover:border-brand hover:shadow-md"
+        >
+          <span className="text-3xl" aria-hidden>
+            📘
+          </span>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-bold text-slate-900">Lesson 1A: I am from…</h3>
+            <p className="mt-0.5 text-xs text-slate-500">
+              Spot the patterns — imid, timid, nimid
+            </p>
+          </div>
+          {lesson1aDone && (
+            <span className="text-emerald-500" aria-label="Complete">
+              ✓
+            </span>
+          )}
+        </Link>
+      </section>
+
       <header className="mb-6">
         <p className="text-xs font-semibold uppercase tracking-wide text-brand">
           World
