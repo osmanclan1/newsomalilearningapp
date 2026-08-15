@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hadal
+  labels:
+    app: hadal
+spec:
+  # k3s-master is control-plane-only (tainted NoSchedule) — only pi-node1 and
+  # pi-node2 can actually host pods right now, so 2 replicas spreads across
+  # both real workers instead of assuming capacity that doesn't exist.
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hadal
+  template:
+    metadata:
+      labels:
+        app: hadal
+    spec:
+      containers:
+        - name: hadal
+          image: ghcr.io/osmanclan1/hadal:v1
+          ports:
+            - containerPort: 80
+          # Without this, Kubernetes marks the pod Ready the instant the
+          # container starts, before nginx has actually proven it can serve
+          # a request — zero real verification.
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          # Separate from readiness: liveness failing restarts the
+          # container, readiness failing just pulls it from Endpoints.
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              cpu: "200m"
+              memory: "128Mi"

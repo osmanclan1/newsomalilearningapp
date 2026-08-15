@@ -1,14 +1,17 @@
-# Implements Phases 1, 2, 4(partial), 5(partial) of cicd-diagnosis-map_1.html,
-# scoped to what this project actually needs:
+# Implements Phases 1, 2, 4, 5 of cicd-diagnosis-map_1.html, scoped to what
+# this project actually needs:
 #   - no test runner exists yet (package.json has no "test" script) — 2.3's
 #     check is therefore "lint + build succeed", not a test-count grep
-#   - no registry/hosting target has been chosen yet (see the Docker map's own
-#     scope note) — Phase 5.1 (push) is deliberately left out, not faked
-#   - no secrets are used by this app at all — Phase 4.1 doesn't apply
+#   - registry is GHCR, pushed only on main (not PRs) — no separate secret
+#     needed, GITHUB_TOKEN gets packages:write via the permissions block below
+#   - Trivy scans the built image for CRITICAL CVEs before it's ever pushed —
+#     security-in-the-pipeline, not bolted on after
 #   - single job, nothing to fan out — Phase 3 (needs:/matrix) doesn't apply
 #
 # Actions are pinned to commit SHA, not a mutable version tag — closes the
 # Action leaf's ⚠ (a tag can be repointed by its owner without this file changing).
+# The Trivy install script is likewise pinned to a specific release tag
+# (v0.74.0), not `main`, for the same reason.
 
 name: CI
 
@@ -18,6 +21,10 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   build-and-verify:
@@ -89,9 +96,31 @@ jobs:
           curl -f http://localhost:8080/unit/1/lesson/1a >/dev/null || { echo "::error::SPA fallback failed — deep link 404"; exit 1; }
           docker rm -f hadal-ci
 
-      # --- Phase 5.1 push: deliberately not implemented — no registry chosen yet ---
-      # - name: Push to registry
-      #   run: docker push <registry>/hadal:${{ github.sha }}
+      # --- DevSecOps gate: fail the build on CRITICAL CVEs before anything
+      # gets pushed. Installer script pinned to the v0.74.0 tag, not `main`. ---
+      - name: Install Trivy
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/v0.74.0/contrib/install.sh \
+            | sh -s -- -b /usr/local/bin v0.74.0
+
+      - name: Scan image for CRITICAL CVEs (5.0)
+        run: |
+          trivy image --severity CRITICAL --exit-code 1 --ignore-unfixed hadal:ci
+
+      # --- Phase 5.1: push to GHCR, main branch only (PR builds are scanned
+      # and smoke-tested above but never published) ---
+      - name: Log in to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Tag and push to GHCR
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          IMAGE=ghcr.io/${{ github.repository_owner }}/hadal
+          docker tag hadal:ci "$IMAGE:${{ github.sha }}"
+          docker tag hadal:ci "$IMAGE:latest"
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
 
       # --- Phase 5.2: Status checks — handled by GitHub itself once this job
       # is added as a required status check under Settings → Branches. ---
