@@ -24,3 +24,15 @@ dist-ssr
 *.sw?
 
 curriculum.txt
+
+# Sibling projects sharing this repo root — separate from this app,
+# never meant to be tracked here. Same list as .dockerignore/eslint.config.js.
+somali_learning_flutter/
+story-hover-translator/
+Somali language learning app/
+
+# Stray files, not part of the app
+*.png
+diagram.py
+rawcurriculum.txt
+unit1-lessons-summary.txt

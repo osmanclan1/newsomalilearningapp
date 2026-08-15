@@ -1,0 +1,27 @@
+# The ArgoCD Application object itself — this is what makes ArgoCD watch
+# and reconcile the hadal Deployment/Service instead of manual `kubectl apply`.
+# NOTE: targetRevision points at this feature branch for now, since PR #1
+# (which would merge k8s/ into main) is still blocked on the GitHub billing
+# issue. Switch targetRevision to `main` once that PR merges.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: hadal
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/osmanclan1/newsomalilearningapp.git
+    targetRevision: ci/docker-github-actions
+    path: k8s
+    directory:
+      exclude: "argocd-application.yaml"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true      # remove cluster resources that get deleted from k8s/
+      selfHeal: true    # revert manual kubectl edits back to what's in git
+    syncOptions:
+      - CreateNamespace=false
